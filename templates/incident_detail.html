@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết sự kiện{% endblock %}
+{% block content %}
+{% set active_page = 'incidents' %}
+<div class="page-header">
+  <div>
+    <h1>Chi tiết sự kiện</h1>
+    <p>{{ incident.camera_name }} · {{ incident.timestamp | vi_datetime }}
+      {% if incident.get('status', 'done') != 'done' %}· <span class="badge badge-connecting">ĐANG GHI / XỬ LÝ</span>{% endif %}
+    </p>
+  </div>
+  <a href="{{ url_for("incidents_page") }}" class="btn">← Quay lại danh sách</a>
+</div>
+
+<div class="detail-grid">
+  <div>
+    {% if not ffmpeg_available %}
+    <div class="flash flash-error" style="margin-bottom:12px;">
+      ⚠️ Chưa phát hiện <span class="mono">ffmpeg</span> trên máy khi ghi sự kiện này — video có thể không phát trực tiếp được trên trình duyệt.
+    </div>
+    {% endif %}
+    <video id="incident-video" controls poster="{{ url_for("media_image", filename=incident.image_file) }}">
+      <source src="{{ url_for("media_video", filename=incident.video_file) }}" type="video/mp4">
+      Trình duyệt của bạn không hỗ trợ phát video này. Bạn có thể tải video về để xem bằng trình phát khác.
+    </video>
+    <div id="video-fallback" class="field-hint camera-error" style="display:none; margin-top:8px;">
+      Video này không phát trực tiếp được trên trình duyệt này (thường do thiếu <span class="mono">ffmpeg</span> lúc ghi, hoặc định dạng chưa tương thích).
+      <a href="{{ url_for("media_video", filename=incident.video_file) }}" download style="color:var(--accent);">Tải video gốc về máy</a> để xem bằng VLC hoặc trình phát khác.
+    </div>
+
+    <a href="{{ url_for("media_video", filename=incident.video_file) }}" download
+       class="btn btn-sm" style="margin-top:10px; display:inline-flex; align-items:center; gap:6px;">
+      ⬇ Tải video về máy
+    </a>
+    <script>
+      (function () {
+        var v = document.getElementById("incident-video");
+        var fb = document.getElementById("video-fallback");
+        if (!v || !fb) return;
+        v.addEventListener("error", function () { fb.style.display = "block"; }, true);
+      })();
+    </script>
+    <p class="field-hint" style="margin-top:10px;">
+      Nếu video không phát được trực tiếp, hãy cài <span class="mono">ffmpeg</span> và thêm vào PATH của hệ thống rồi khởi động lại ứng dụng — các sự kiện mới sẽ tự động được mã hoá lại sang định dạng tương thích trình duyệt.
+      Video cũ vẫn có thể mở bằng VLC hoặc trình phát khác.
+    </p>
+    {% if incident.get('status', 'done') != 'done' %}
+    <p class="field-hint camera-error" style="margin-top:6px;">Sự kiện đang được ghi/xử lý — video có thể chưa đầy đủ hoặc chưa phát được, hãy tải lại trang sau ít giây.</p>
+    {% endif %}
+
+    <p class="section-title" style="margin-top:22px;">Mô tả</p>
+    <div class="panel">{{ incident.description }}</div>
+
+    <p class="section-title" style="margin-top:22px;">Ghi chú của người quản lý</p>
+    <form method="post" action="{{ url_for("incident_note", incident_id=incident.id) }}" class="form-grid" style="max-width:none;">
+      <textarea name="note" placeholder="Thêm ghi chú, ví dụ: đã xác minh, báo động giả, đã xử lý...">{{ incident.note }}</textarea>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="btn btn-primary">Lưu ghi chú</button>
+      </div>
+    </form>
+  </div>
+
+  <div>
+    <p class="section-title">Thông tin sự kiện</p>
+    <div class="panel">
+      <div class="kv-list">
+        <div class="kv-row"><span class="k">Camera</span><span class="v">{{ incident.camera_name }}</span></div>
+        <div class="kv-row"><span class="k">Thời gian</span><span class="v">{{ incident.timestamp | vi_datetime }}</span></div>
+        <div class="kv-row"><span class="k">Nhãn</span><span class="v">{{ incident.label }}</span></div>
+        <div class="kv-row"><span class="k">Độ tin cậy</span><span class="v">{{ (incident.confidence * 100) | round(0, 'floor') | int }}%</span></div>
+        <div class="kv-row"><span class="k">Đã xem</span><span class="v">{{ 'Có' if incident.reviewed else 'Chưa' }}</span></div>
+        <div class="kv-row"><span class="k">Trạng thái xử lý</span><span class="v">{{ 'Hoàn tất' if incident.get('status', 'done') == 'done' else 'Đang ghi/xử lý…' }}</span></div>
+        <div class="kv-row"><span class="k">File video</span><span class="v">{{ incident.video_file }}</span></div>
+        <div class="kv-row"><span class="k">File ảnh</span><span class="v">{{ incident.image_file }}</span></div>
+      </div>
+    </div>
+
+    <p class="section-title" style="margin-top:20px;">Ảnh chụp thời điểm phát hiện</p>
+    <div class="panel" style="padding:0; overflow:hidden;">
+      <img src="{{ url_for("media_image", filename=incident.image_file) }}" style="width:100%; display:block;" alt="">
+    </div>
+
+    <form id="delete-form-incident-{{ incident.id }}" method="post"></form>
+    <button type="button" class="btn btn-danger" style="margin-top:20px;"
+            data-label="sự kiện này" data-soft-url="{{ url_for('incident_delete', incident_id=incident.id) }}"
+            data-hard-url="{{ url_for('incident_delete_permanent', incident_id=incident.id) }}"
+            data-target-form="delete-form-incident-{{ incident.id }}"
+            onclick="openDeleteChoiceFromButton(this)">Xoá sự kiện này</button>
+  </div>
+</div>
+{% endblock %}

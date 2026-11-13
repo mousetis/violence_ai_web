@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Sự kiện cảnh báo{% endblock %}
+{% block content %}
+{% set active_page = 'incidents' %}
+<div class="page-header">
+  <div>
+    <h1>Sự kiện cảnh báo</h1>
+    <p>Toàn bộ video, ảnh chụp và mô tả các lần phát hiện.</p>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+  <label style="margin:0;" for="camera_id">Lọc theo camera</label>
+  <form method="get" id="filter-form" style="display:flex; gap:8px; align-items:center;">
+    <select name="camera_id" id="camera_id" onchange="document.getElementById('filter-form').submit()"
+            style="background:var(--bg-input); color:var(--text); border:1px solid var(--border); border-radius:5px; padding:7px 10px; font-size:13.5px;">
+      <option value="">Tất cả camera</option>
+      {% for c in cameras %}
+      <option value="{{ c.id }}" {{ 'selected' if selected_camera == c.id else '' }}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <span class="field-hint" style="margin:0;">{{ incidents|length }} sự kiện</span>
+</div>
+
+{% if incidents %}
+<form id="incidents-bulk-form" method="post" action="{{ url_for("incidents_bulk_delete") }}"></form>
+<div class="panel" style="margin-bottom:14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+  <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+    <input type="checkbox" id="incident-select-all" onchange="toggleAllChecks('incident-check', this.checked)">
+    Chọn tất cả
+  </label>
+  <button type="button" class="btn btn-sm btn-danger"
+          data-label="các sự kiện đã chọn" data-soft-url="{{ url_for('incidents_bulk_delete') }}"
+          data-hard-url="{{ url_for('incidents_bulk_delete_permanent') }}" data-target-form="incidents-bulk-form"
+          data-checkbox-class="incident-check"
+          onclick="openDeleteChoiceFromButton(this)">Xoá đã chọn</button>
+</div>
+
+  {% for i in incidents %}
+  <div style="display:flex; align-items:flex-start; gap:10px;">
+    <input type="checkbox" class="incident-check" name="ids" value="{{ i.id }}" form="incidents-bulk-form"
+           style="margin-top:20px; flex-shrink:0;">
+    <a class="incident-row" href="{{ url_for("incident_detail", incident_id=i.id) }}" style="flex:1; min-width:0;">
+      <div class="thumb"><img src="{{ url_for("media_image", filename=i.image_file) }}" alt=""></div>
+      <div class="info">
+        <div class="top-line">
+          <span class="cam">{{ i.camera_name }}</span>
+          <span class="ts">{{ i.timestamp | vi_datetime }}</span>
+          <span class="confidence-pill">độ tin cậy {{ (i.confidence * 100) | round(0, 'floor') | int }}%</span>
+          {% if i.get('status', 'done') != 'done' %}<span class="badge badge-connecting">ĐANG GHI</span>{% endif %}
+          {% if not i.reviewed %}<span class="badge badge-connecting">CHƯA XEM</span>{% endif %}
+        </div>
+        <div class="desc">{{ i.description }}</div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+{% else %}
+<div class="empty-state">Không có sự kiện nào khớp bộ lọc hiện tại.</div>
+{% endif %}
+{% endblock %}

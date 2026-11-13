@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}Camera{% endblock %}
+{% block content %}
+{% set active_page = 'cameras' %}
+<div class="page-header">
+  <div>
+    <h1>Quản lý camera</h1>
+    <p>Thêm, sửa hoặc xoá camera — dùng webcam máy tính để test nhanh, hoặc camera IP/CCTV qua RTSP.</p>
+  </div>
+</div>
+
+<div class="panel" style="margin-bottom:28px;">
+  <p class="section-title">Thêm camera mới</p>
+  <form method="post" action="{{ url_for("cameras_page") }}" class="form-grid" style="max-width:520px;">
+    <div>
+      <label for="name">Tên camera</label>
+      <input type="text" id="name" name="name" placeholder="Ví dụ: Webcam laptop, Cổng chính..." required>
+    </div>
+
+    <div>
+      <label>Cách hệ thống nhận dữ liệu</label>
+      <div class="source-toggle">
+        <label class="radio-pill">
+          <input type="radio" name="input_mode" value="pull" checked onchange="updateCameraInputModeUI(this)">
+          Web app tự kết nối camera
+        </label>
+        <label class="radio-pill">
+          <input type="radio" name="input_mode" value="push" onchange="updateCameraInputModeUI(this)">
+          Camera/thiết bị AI tự gửi dữ liệu (Edge AI)
+        </label>
+      </div>
+      <p class="field-hint">Chọn “Edge AI” nếu camera hoặc thiết bị gắn kèm (Jetson, mini PC...) tự quay và tự chạy model phát hiện bạo lực, chỉ gửi kết quả về web app này qua API.</p>
+    </div>
+
+    <div class="pull-only-fields">
+      <label>Nguồn camera</label>
+      <div class="source-toggle">
+        <label class="radio-pill">
+          <input type="radio" name="source_type" value="webcam" checked onchange="updateCameraSourceUI(this)">
+          Webcam máy tính
+        </label>
+        <label class="radio-pill">
+          <input type="radio" name="source_type" value="rtsp" onchange="updateCameraSourceUI(this)">
+          Camera IP / CCTV (RTSP)
+        </label>
+      </div>
+    </div>
+
+    <div class="pull-only-fields webcam-fields">
+      <label for="webcam_index">Chỉ số webcam</label>
+      <input type="text" id="webcam_index" name="webcam_index" value="0">
+      <p class="field-hint">Thường là 0 cho webcam mặc định của máy. Nếu có nhiều camera gắn ngoài, thử 1, 2...</p>
+    </div>
+
+    <div class="pull-only-fields rtsp-fields">
+      <label for="rtsp_url">Đường dẫn RTSP</label>
+      <input type="text" id="rtsp_url" name="rtsp_url" placeholder="rtsp://user:pass@192.168.1.50:554/stream1">
+      <p class="field-hint">Lấy từ nhà sản xuất camera/đầu ghi (NVR/DVR), dạng rtsp://tên_đăng_nhập:mật_khẩu@địa_chỉ_ip:cổng/đường_dẫn</p>
+    </div>
+
+    <div class="pull-only-fields">
+      <label for="sensitivity">Độ nhạy phát hiện chuyển động (0.005 – 0.2)</label>
+      <input type="text" id="sensitivity" name="sensitivity" value="0.03">
+      <p class="field-hint">Giá trị càng nhỏ càng nhạy. Đây là bộ phát hiện tạm thời (placeholder), chưa phải AI phân tích hành vi thật.</p>
+    </div>
+
+    <div class="pull-only-fields">
+      <label for="orientation">Chiều ảnh</label>
+      <select id="orientation" name="orientation">
+        <option value="none">Không lật (mặc định)</option>
+        <option value="flip_h">Lật ngang (ảnh gương)</option>
+        <option value="flip_v">Lật dọc</option>
+        <option value="rotate_180">Xoay 180°</option>
+      </select>
+      <p class="field-hint">Chỉnh nếu hình ảnh camera bị lật/ngược — áp dụng đồng nhất cho cả xem trực tiếp, video lưu và ảnh chụp.</p>
+    </div>
+
+    <div class="push-only-fields" style="display:none;">
+      <p class="field-hint">Sau khi thêm, vào trang xem camera này để lấy thông tin kết nối API (mã camera, khoá API) và hướng dẫn cấu hình thiết bị AI.</p>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width:fit-content;">Thêm camera</button>
+  </form>
+</div>
+
+<p class="section-title">Danh sách camera ({{ cameras|length }})</p>
+
+{% if cameras %}
+<form id="cameras-bulk-form" method="post" action="{{ url_for("cameras_bulk_delete") }}"></form>
+<div class="panel" style="margin-bottom:14px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+  <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+    <input type="checkbox" id="camera-select-all" onchange="toggleAllChecks('camera-check', this.checked)">
+    Chọn tất cả
+  </label>
+  <button type="button" class="btn btn-sm btn-danger"
+          data-label="các camera đã chọn" data-soft-url="{{ url_for('cameras_bulk_delete') }}"
+          data-hard-url="{{ url_for('cameras_bulk_delete_permanent') }}" data-target-form="cameras-bulk-form"
+          data-checkbox-class="camera-check"
+          onclick="openDeleteChoiceFromButton(this)">Xoá đã chọn</button>
+</div>
+<div class="camera-list">
+  {% for c in cameras %}
+  <div class="camera-row">
+    <div class="camera-row-main">
+      <input type="checkbox" class="camera-check" name="ids" value="{{ c.id }}" form="cameras-bulk-form"
+             style="margin-right:2px; flex-shrink:0;">
+      <div class="camera-row-info">
+        <span class="cam-name">{{ c.name }}</span>
+        <span class="source-label mono">
+          {% if c.source_type == 'webcam' %}Webcam #{{ c.webcam_index }}{% else %}{{ c.rtsp_url }}{% endif %}
+        </span>
+      </div>
+      <div class="camera-row-meta">
+        {% if c._status == 'live' %}<span class="badge badge-live">LIVE</span>
+        {% elif c._status == 'connecting' %}<span class="badge badge-connecting">ĐANG KẾT NỐI</span>
+        {% else %}<span class="badge badge-offline" title="{{ c._error or '' }}">MẤT KẾT NỐI</span>
+        {% endif %}
+        {% if c.get('input_mode') == 'push' %}
+        <span class="mono sensitivity-tag" title="Camera tự phát hiện bằng AI ở biên, web app chỉ nhận kết quả">Edge AI</span>
+        {% else %}
+        <span class="mono sensitivity-tag">độ nhạy {{ c.sensitivity }}</span>
+        {% endif %}
+      </div>
+      <div class="camera-row-actions">
+        <a class="btn btn-sm" href="{{ url_for("camera_view", camera_id=c.id) }}">Xem</a>
+        <button class="btn btn-sm" type="button" onclick="toggleCameraEdit('{{ c.id }}')">Sửa</button>
+        <form id="delete-form-camera-{{ c.id }}" method="post"></form>
+        <button class="btn btn-sm btn-danger" type="button"
+                data-label="camera “{{ c.name }}”" data-soft-url="{{ url_for('delete_camera', camera_id=c.id) }}"
+                data-hard-url="{{ url_for('delete_camera_permanent', camera_id=c.id) }}"
+                data-target-form="delete-form-camera-{{ c.id }}"
+                onclick="openDeleteChoiceFromButton(this)">Xoá</button>
+      </div>
+    </div>
+
+    {% if c._error and c._status != 'live' %}
+    <p class="field-hint camera-error">{{ c._error }}</p>
+    {% endif %}
+
+    <div class="camera-edit-panel" id="edit-{{ c.id }}">
+      <form method="post" action="{{ url_for("edit_camera", camera_id=c.id) }}" class="form-grid" style="max-width:520px;">
+        <div>
+          <label>Tên camera</label>
+          <input type="text" name="name" value="{{ c.name }}">
+        </div>
+
+        <div>
+          <label>Cách hệ thống nhận dữ liệu</label>
+          <div class="source-toggle">
+            <label class="radio-pill">
+              <input type="radio" name="input_mode" value="pull" {{ 'checked' if c.get('input_mode', 'pull') == 'pull' else '' }} onchange="updateCameraInputModeUI(this)">
+              Web app tự kết nối camera
+            </label>
+            <label class="radio-pill">
+              <input type="radio" name="input_mode" value="push" {{ 'checked' if c.get('input_mode') == 'push' else '' }} onchange="updateCameraInputModeUI(this)">
+              Camera/thiết bị AI tự gửi dữ liệu (Edge AI)
+            </label>
+          </div>
+        </div>
+
+        <div class="pull-only-fields">
+          <label>Nguồn camera</label>
+          <div class="source-toggle">
+            <label class="radio-pill">
+              <input type="radio" name="source_type" value="webcam" {{ 'checked' if c.source_type == 'webcam' else '' }} onchange="updateCameraSourceUI(this)">
+              Webcam máy tính
+            </label>
+            <label class="radio-pill">
+              <input type="radio" name="source_type" value="rtsp" {{ 'checked' if c.source_type == 'rtsp' else '' }} onchange="updateCameraSourceUI(this)">
+              Camera IP / CCTV (RTSP)
+            </label>
+          </div>
+        </div>
+
+        <div class="pull-only-fields webcam-fields">
+          <label>Chỉ số webcam</label>
+          <input type="text" name="webcam_index" value="{{ c.webcam_index }}">
+        </div>
+
+        <div class="pull-only-fields rtsp-fields">
+          <label>Đường dẫn RTSP</label>
+          <input type="text" name="rtsp_url" value="{{ c.rtsp_url }}">
+        </div>
+
+        <div class="pull-only-fields">
+          <label>Độ nhạy</label>
+          <input type="text" name="sensitivity" value="{{ c.sensitivity }}">
+        </div>
+
+        <div class="pull-only-fields">
+          <label>Chiều ảnh</label>
+          <select name="orientation">
+            <option value="none" {{ 'selected' if c.get('orientation', 'none') == 'none' else '' }}>Không lật (mặc định)</option>
+            <option value="flip_h" {{ 'selected' if c.get('orientation') == 'flip_h' else '' }}>Lật ngang (ảnh gương)</option>
+            <option value="flip_v" {{ 'selected' if c.get('orientation') == 'flip_v' else '' }}>Lật dọc</option>
+            <option value="rotate_180" {{ 'selected' if c.get('orientation') == 'rotate_180' else '' }}>Xoay 180°</option>
+          </select>
+        </div>
+
+        <div class="push-only-fields" style="display:none;">
+          <p class="field-hint">Xem trang chi tiết camera để lấy thông tin kết nối API cho thiết bị AI.</p>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:fit-content;">Lưu thay đổi</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">Chưa có camera nào được thêm.</div>
+{% endif %}
+{% endblock %}

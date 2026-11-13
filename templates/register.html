@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Đăng ký{% endblock %}
+{% block content_noauth %}
+<div class="login-shell">
+  <div class="login-box">
+    <div class="brand" style="padding:0 0 16px 0;">
+      <div class="brand-mark">VA</div>
+      <div class="brand-text">
+        <strong>Violence AI Watch</strong>
+        <span>Giám sát camera nội bộ</span>
+      </div>
+    </div>
+    <h1>Tạo tài khoản</h1>
+    <p class="sub">Mỗi tài khoản có camera và sự kiện cảnh báo riêng — không chia sẻ với tài khoản khác.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="form-grid" style="max-width:none;">
+      <div>
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" autofocus required>
+      </div>
+      <div>
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" required>
+        <p class="field-hint">Tối thiểu 6 ký tự.</p>
+      </div>
+      <div>
+        <label for="confirm_password">Xác nhận mật khẩu</label>
+        <input type="password" id="confirm_password" name="confirm_password" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Đăng ký</button>
+    </form>
+    <p class="field-hint" style="margin-top:16px;">
+      Đã có tài khoản? <a href="{{ url_for('login') }}" style="color:var(--accent);">Đăng nhập</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt{% endblock %}
+{% block content %}
+{% set active_page = 'settings' %}
+<div class="page-header">
+  <div>
+    <h1>Cài đặt</h1>
+    <p>Đổi mật khẩu tài khoản đăng nhập.</p>
+  </div>
+</div>
+
+<div class="panel" style="max-width:480px;">
+  <p class="section-title">Đổi mật khẩu</p>
+  <form method="post" class="form-grid" style="max-width:none;">
+    <div>
+      <label for="current_password">Mật khẩu hiện tại</label>
+      <input type="password" id="current_password" name="current_password" required>
+    </div>
+    <div>
+      <label for="new_password">Mật khẩu mới</label>
+      <input type="password" id="new_password" name="new_password" required>
+      <p class="field-hint">Tối thiểu 6 ký tự.</p>
+    </div>
+    <div>
+      <label for="confirm_password">Xác nhận mật khẩu mới</label>
+      <input type="password" id="confirm_password" name="confirm_password" required>
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:fit-content;">Đổi mật khẩu</button>
+  </form>
+</div>
+
+<div class="panel" style="max-width:680px;">
+  <p class="section-title">Kết nối thiết bị AI (Edge AI)</p>
+  <p class="field-hint">Dùng thông tin này để cấu hình camera/thiết bị AI tự gửi kết quả phát hiện về hệ thống — xem <code>detector_service.py</code> để có script mẫu. Áp dụng cho camera nào bạn chọn chế độ “Camera/thiết bị AI tự gửi dữ liệu” khi thêm/sửa camera.</p>
+
+  <div style="margin:14px 0;">
+    <label>Địa chỉ web app (base URL)</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input type="text" id="api-base-url" value="{{ api_base_url }}" readonly class="mono" style="flex:1;">
+      <button type="button" class="btn btn-sm" onclick="copyToClipboard('api-base-url', this)">Chép</button>
+    </div>
+  </div>
+
+  <div style="margin:14px 0;">
+    <label>Khoá API (header <code>X-API-Key</code>)</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input type="password" id="api-key-field" value="{{ api_key }}" readonly class="mono" style="flex:1;">
+      <button type="button" class="btn btn-sm" onclick="var f=document.getElementById('api-key-field'); f.type = f.type === 'password' ? 'text' : 'password';">Hiện/ẩn</button>
+      <button type="button" class="btn btn-sm" onclick="copyToClipboard('api-key-field', this)">Chép</button>
+    </div>
+    <p class="field-hint">Khoá này dùng chung cho mọi camera Edge AI của hệ thống — giữ bí mật, đừng chia sẻ ra ngoài.</p>
+  </div>
+
+  <form method="post" action="{{ url_for('regenerate_api_key') }}"
+        onsubmit="return confirm('Tạo khoá API mới? Các thiết bị AI đang dùng khoá cũ sẽ ngừng gửi được dữ liệu cho tới khi cập nhật khoá mới.');">
+    <button type="submit" class="btn btn-sm btn-danger">Tạo khoá mới</button>
+  </form>
+</div>
+{% endblock %}

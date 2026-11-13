@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Tổng quan{% endblock %}
+{% block content %}
+{% set active_page = 'dashboard' %}
+<div class="page-header">
+  <div>
+    <h1>Tổng quan</h1>
+    <p>Trạng thái camera và các cảnh báo gần đây.</p>
+  </div>
+  <a href="{{ url_for('cameras_page') }}" class="btn btn-primary">+ Thêm camera</a>
+</div>
+
+{% if not ffmpeg_available %}
+<div class="flash flash-error" style="margin-bottom:20px;">
+  ⚠️ Chưa phát hiện <span class="mono">ffmpeg</span> trên máy — video cảnh báo mới ghi có thể không phát trực tiếp được trên trình duyệt (vẫn mở được bằng VLC hoặc trình phát khác). Cài ffmpeg, thêm vào PATH rồi khởi động lại ứng dụng để khắc phục — xem hướng dẫn trong README.
+</div>
+{% endif %}
+
+<div class="stat-row">
+  <a class="stat-card live" href="{{ url_for('cameras_page') }}">
+    <div class="stat-value">{{ live_count }}/{{ cameras|length }}</div>
+    <div class="stat-label">Camera đang trực tuyến</div>
+  </a>
+  <a class="stat-card alert" href="{{ url_for('incidents_page') }}">
+    <div class="stat-value">{{ total_incidents }}</div>
+    <div class="stat-label">Tổng số sự kiện cảnh báo</div>
+  </a>
+  <a class="stat-card" href="#recent-incidents">
+    <div class="stat-value">{{ recent_incidents|length }}</div>
+    <div class="stat-label">Sự kiện gần nhất hiển thị bên dưới</div>
+  </a>
+</div>
+
+<p class="section-title">Camera</p>
+{% if cameras %}
+<div class="camera-grid">
+  {% for c in cameras %}
+  <a class="camera-card" href="{{ url_for('camera_view', camera_id=c.id) }}">
+    <div class="thumb">
+      {% if c._status == 'live' %}
+        <img src="{{ url_for('camera_stream', camera_id=c.id) }}" alt="{{ c.name }}">
+      {% else %}
+        <span class="offline-note">Không có tín hiệu</span>
+      {% endif %}
+    </div>
+    <div class="meta">
+      <span class="cam-name">{{ c.name }}</span>
+      {% if c._status == 'live' %}
+        <span class="badge badge-live">LIVE</span>
+      {% elif c._status == 'connecting' %}
+        <span class="badge badge-connecting">ĐANG KẾT NỐI</span>
+      {% else %}
+        <span class="badge badge-offline">MẤT KẾT NỐI</span>
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="margin-bottom:28px;">
+  Chưa có camera nào. <a href="{{ url_for('cameras_page') }}" style="color:var(--accent);">Thêm camera RTSP đầu tiên</a>.
+</div>
+{% endif %}
+
+<p class="section-title" id="recent-incidents">Sự kiện cảnh báo gần đây</p>
+{% if recent_incidents %}
+  {% for i in recent_incidents %}
+  <a class="incident-row" href="{{ url_for('incident_detail', incident_id=i.id) }}">
+    <div class="thumb"><img src="{{ url_for('media_image', filename=i.image_file) }}" alt=""></div>
+    <div class="info">
+      <div class="top-line">
+        <span class="cam">{{ i.camera_name }}</span>
+        <span class="ts">{{ i.timestamp | vi_datetime }}</span>
+        <span class="confidence-pill">độ tin cậy {{ (i.confidence * 100) | round(0, 'floor') | int }}%</span>
+        {% if i.get('status', 'done') != 'done' %}<span class="badge badge-connecting">ĐANG GHI</span>{% endif %}
+      </div>
+      <div class="desc">{{ i.description }}</div>
+    </div>
+  </a>
+  {% endfor %}
+{% else %}
+<div class="empty-state">Chưa có sự kiện cảnh báo nào được ghi nhận.</div>
+{% endif %}
+{% endblock %}

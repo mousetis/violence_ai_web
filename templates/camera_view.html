@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ camera.name }}{% endblock %}
+{% block content %}
+{% set active_page = 'cameras' %}
+<div class="page-header">
+  <div>
+    <h1>{{ camera.name }}</h1>
+    <p class="mono">
+      {% if camera.source_type == 'webcam' %}Webcam #{{ camera.webcam_index }}{% else %}{{ camera.rtsp_url }}{% endif %}
+    </p>
+  </div>
+  <a href="{{ url_for('cameras_page') }}" class="btn">← Quay lại danh sách camera</a>
+</div>
+
+<div class="status-line">
+  {% if status.status == 'live' %}
+    <span class="badge badge-live">LIVE</span> Đang phát trực tiếp
+  {% elif status.status == 'connecting' %}
+    <span class="badge badge-connecting">ĐANG KẾT NỐI</span> Đang thử kết nối tới camera…
+  {% else %}
+    <span class="badge badge-offline">MẤT KẾT NỐI</span> {{ status.error or 'Không thể kết nối tới camera này.' }}
+  {% endif %}
+</div>
+
+{% if camera.get('input_mode') == 'push' %}
+<div class="panel" style="margin:14px 0; max-width:680px;">
+  <p class="section-title">Kết nối thiết bị AI (Edge AI)</p>
+  <p class="field-hint">Camera này ở chế độ nhận dữ liệu từ thiết bị AI riêng — web app không tự kết nối camera, chỉ nhận kết quả qua API bên dưới. Xem <code>detector_service.py</code> trong project để có ví dụ script sẵn dùng.</p>
+  <p class="field-hint">Mã camera (camera_id): <code class="mono">{{ camera.id }}</code></p>
+  <p class="field-hint">Địa chỉ API: <code class="mono">{{ api_base_url }}/api/incidents</code> và <code class="mono">{{ api_base_url }}/api/cameras/{{ camera.id }}/frame</code></p>
+  <p class="field-hint">Khoá xác thực (header <code>X-API-Key</code>): xem tại trang <a href="{{ url_for('settings_page') }}" style="color:var(--accent);">Cài đặt</a>.</p>
+</div>
+{% else %}
+<form method="post" action="{{ url_for('camera_set_orientation', camera_id=camera.id) }}"
+      style="margin:14px 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+  <label for="orientation" style="margin:0;">Chiều ảnh</label>
+  <select name="orientation" id="orientation" onchange="this.form.submit()"
+          style="background:var(--bg-input); color:var(--text); border:1px solid var(--border); border-radius:5px; padding:7px 10px; font-size:13.5px;">
+    <option value="none" {{ 'selected' if camera.get('orientation', 'none') == 'none' else '' }}>Không lật (mặc định)</option>
+    <option value="flip_h" {{ 'selected' if camera.get('orientation') == 'flip_h' else '' }}>Lật ngang (ảnh gương)</option>
+    <option value="flip_v" {{ 'selected' if camera.get('orientation') == 'flip_v' else '' }}>Lật dọc</option>
+    <option value="rotate_180" {{ 'selected' if camera.get('orientation') == 'rotate_180' else '' }}>Xoay 180°</option>
+  </select>
+  <span class="field-hint" style="margin:0;">Chọn để lật/xoay ngay — áp dụng tức thì cho camera đang xem, không cần kết nối lại.</span>
+</form>
+{% endif %}
+
+<div class="live-frame">
+  {% if status.status == 'live' %}
+    <img src="{{ url_for('camera_stream', camera_id=camera.id) }}" alt="{{ camera.name }}">
+  {% else %}
+    <div style="aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-family:var(--font-mono); font-size:13px; text-align:center; padding:16px;">
+      {% if camera.get('input_mode') == 'push' %}Chưa nhận được khung hình nào từ thiết bị AI{% else %}Không có tín hiệu{% endif %}
+    </div>
+  {% endif %}
+</div>
+
+<p class="field-hint" style="margin-top:14px; max-width:640px;">
+  Hệ thống tự động ghi lại đoạn video (kèm ảnh chụp và mô tả) khi bộ phát hiện nhận thấy chuyển động mạnh/đột ngột.
+  Xem các sự kiện đã ghi nhận tại mục <a href="{{ url_for('incidents_page', camera_id=camera.id) }}" style="color:var(--accent);">Sự kiện cảnh báo</a>.
+</p>
+{% endblock %}

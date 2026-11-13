@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<script>
+// Ap dung che do sang/toi ngay lap tuc (truoc khi ve trang) de tranh nhap nhay mau.
+(function () {
+  try {
+    var saved = localStorage.getItem("va_theme");
+    if (saved === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  } catch (e) {}
+})();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Giám sát camera{% endblock %} · Violence AI Watch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% if session.get('user_id') %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">VA</div>
+      <div class="brand-text">
+        <strong>Violence AI Watch</strong>
+        <span>Giám sát camera nội bộ</span>
+      </div>
+    </div>
+    <nav class="nav-group">
+      <a class="nav-link {{ 'active' if active_page=='dashboard' else '' }}" href="{{ url_for('dashboard') }}">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="2.5" width="6" height="6" rx="1.2"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.2"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.2"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.2"/></svg>
+        <span class="nav-text">Tổng quan</span>
+      </a>
+      <a class="nav-link {{ 'active' if active_page=='cameras' else '' }}" href="{{ url_for('cameras_page') }}">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5" width="11" height="10" rx="1.5"/><path d="M13.5 8.2L17 6v8l-3.5-2.2"/></svg>
+        <span class="nav-text">Camera</span>
+      </a>
+      <a class="nav-link {{ 'active' if active_page=='incidents' else '' }}" href="{{ url_for('incidents_page') }}">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2.5L17.5 16h-15L10 2.5z"/><path d="M10 8v3.2" stroke-linecap="round"/><circle cx="10" cy="13.6" r="0.9" fill="currentColor" stroke="none"/></svg>
+        <span class="nav-text">Sự kiện cảnh báo</span>
+      </a>
+      <a class="nav-link {{ 'active' if active_page=='settings' else '' }}" href="{{ url_for('settings_page') }}">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="2.6"/><path d="M10 3v1.6M10 15.4V17M17 10h-1.6M4.6 10H3M15 15l-1.2-1.2M6.2 6.2L5 5M15 5l-1.2 1.2M6.2 13.8L5 15"/></svg>
+        <span class="nav-text">Cài đặt</span>
+      </a>
+      <a class="nav-link {{ 'active' if active_page=='trash' else '' }}" href="{{ url_for('trash_page') }}">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h12M8 6V4.5a1 1 0 011-1h2a1 1 0 011 1V6M8.5 9.5v5M11.5 9.5v5" stroke-linecap="round"/><path d="M5.5 6l.6 9.4a1.5 1.5 0 001.5 1.4h4.8a1.5 1.5 0 001.5-1.4l.6-9.4"/></svg>
+        <span class="nav-text">Thùng rác</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button type="button" class="btn btn-sm" id="theme-toggle" onclick="toggleTheme()" style="width:100%; margin-bottom:10px;"></button>
+      <div class="user-chip">
+        <span class="name">{{ session.get('username') }}</span>
+        <a class="logout-link" href="{{ url_for('logout') }}">Đăng xuất</a>
+      </div>
+    </div>
+  </aside>
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<div id="delete-choice-modal" class="modal-overlay">
+  <div class="modal-box">
+    <p class="modal-title">Bạn muốn xoá <span id="delete-choice-label">mục này</span> như thế nào?</p>
+    <p class="field-hint">
+      <strong>Chuyển vào thùng rác:</strong> có thể khôi phục trong {{ trash_retention_days if trash_retention_days is defined else 15 }} ngày trước khi tự động xoá hẳn.<br>
+      <strong>Xoá vĩnh viễn:</strong> mất ngay lập tức, không thể hoàn tác.
+    </p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-sm" onclick="closeDeleteChoice()">Huỷ</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="confirmDeleteChoice('soft')">Chuyển vào thùng rác</button>
+      <button type="button" class="btn btn-sm btn-danger" onclick="confirmDeleteChoice('hard')">Xoá vĩnh viễn</button>
+    </div>
+  </div>
+</div>
+{% else %}
+  {% block content_noauth %}{% endblock %}
+{% endif %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Thùng rác{% endblock %}
+{% block content %}
+{% set active_page = 'trash' %}
+<div class="page-header">
+  <div>
+    <h1>Thùng rác</h1>
+    <p>Camera và sự kiện đã xoá sẽ nằm ở đây tối đa {{ retention_days }} ngày trước khi tự động xoá vĩnh viễn.</p>
+  </div>
+</div>
+
+<p class="section-title">Camera ({{ cameras|length }})</p>
+{% if cameras %}
+<form id="trash-cameras-bulk-form" method="post" action="{{ url_for("cameras_bulk_restore") }}"></form>
+<div class="trash-section panel">
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:10px;">
+    <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="trash-camera-select-all" onchange="toggleAllChecks('trash-camera-check', this.checked)">
+      Chọn tất cả
+    </label>
+    <button type="button" class="btn btn-sm"
+            onclick="submitBulkChecked('trash-cameras-bulk-form', 'trash-camera-check', 'camera')">Khôi phục đã chọn</button>
+    <button type="button" class="btn btn-sm btn-danger"
+            data-form-id="trash-cameras-bulk-form" data-checkbox-class="trash-camera-check"
+            data-permanent-url="{{ url_for('cameras_bulk_delete_permanent') }}" data-label="camera"
+            onclick="submitBulkPermanentFromButton(this)">Xoá vĩnh viễn đã chọn</button>
+  </div>
+  {% for c in cameras %}
+  <div class="trash-item">
+    <input type="checkbox" class="trash-camera-check" name="ids" value="{{ c.id }}" form="trash-cameras-bulk-form">
+    <div class="trash-item-info">
+      <div class="trash-item-name">{{ c.name }}</div>
+      <div class="trash-item-meta">
+        {% if c.source_type == 'webcam' %}Webcam #{{ c.webcam_index }}{% else %}{{ c.rtsp_url }}{% endif %}
+        · còn {{ c._days_left }} ngày trước khi tự xoá vĩnh viễn
+      </div>
+    </div>
+    <div class="trash-item-actions">
+      <form method="post" action="{{ url_for("restore_camera", camera_id=c.id) }}">
+        <button type="submit" class="btn btn-sm">Khôi phục</button>
+      </form>
+      <form method="post" action="{{ url_for("delete_camera_permanent", camera_id=c.id) }}"
+            onsubmit="return confirm('Xoá VĨNH VIỄN camera “{{ c.name }}”? Không thể hoàn tác.');">
+        <button type="submit" class="btn btn-sm btn-danger">Xoá vĩnh viễn</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">Không có camera nào trong thùng rác.</div>
+{% endif %}
+
+<p class="section-title" style="margin-top:26px;">Sự kiện cảnh báo ({{ incidents|length }})</p>
+{% if incidents %}
+<form id="trash-incidents-bulk-form" method="post" action="{{ url_for("incidents_bulk_restore") }}"></form>
+<div class="trash-section panel">
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:10px;">
+    <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <input type="checkbox" id="trash-incident-select-all" onchange="toggleAllChecks('trash-incident-check', this.checked)">
+      Chọn tất cả
+    </label>
+    <button type="button" class="btn btn-sm"
+            onclick="submitBulkChecked('trash-incidents-bulk-form', 'trash-incident-check', 'sự kiện')">Khôi phục đã chọn</button>
+    <button type="button" class="btn btn-sm btn-danger"
+            data-form-id="trash-incidents-bulk-form" data-checkbox-class="trash-incident-check"
+            data-permanent-url="{{ url_for('incidents_bulk_delete_permanent') }}" data-label="sự kiện"
+            onclick="submitBulkPermanentFromButton(this)">Xoá vĩnh viễn đã chọn</button>
+  </div>
+  {% for i in incidents %}
+  <div class="trash-item">
+    <input type="checkbox" class="trash-incident-check" name="ids" value="{{ i.id }}" form="trash-incidents-bulk-form">
+    <div class="trash-item-info">
+      <div class="trash-item-name">{{ i.camera_name }} · {{ i.timestamp | vi_datetime }}</div>
+      <div class="trash-item-meta">{{ i.description }} · còn {{ i._days_left }} ngày trước khi tự xoá vĩnh viễn</div>
+    </div>
+    <div class="trash-item-actions">
+      <form method="post" action="{{ url_for("restore_incident", incident_id=i.id) }}">
+        <button type="submit" class="btn btn-sm">Khôi phục</button>
+      </form>
+      <form method="post" action="{{ url_for("incident_delete_permanent", incident_id=i.id) }}"
+            onsubmit="return confirm('Xoá VĨNH VIỄN sự kiện này (kèm video và ảnh)? Không thể hoàn tác.');">
+        <button type="submit" class="btn btn-sm btn-danger">Xoá vĩnh viễn</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">Không có sự kiện nào trong thùng rác.</div>
+{% endif %}
+{% endblock %}

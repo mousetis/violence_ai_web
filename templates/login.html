@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block content_noauth %}
+<div class="login-shell">
+  <div class="login-box">
+    <div class="brand" style="padding:0 0 16px 0;">
+      <div class="brand-mark">VA</div>
+      <div class="brand-text">
+        <strong>Violence AI Watch</strong>
+        <span>Giám sát camera nội bộ</span>
+      </div>
+    </div>
+    <h1>Đăng nhập</h1>
+    <p class="sub">Đăng nhập để xem camera và quản lý cảnh báo.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="form-grid" style="max-width:none;">
+      <div>
+        <label for="username">Tên đăng nhập</label>
+        <input type="text" id="username" name="username" autofocus required>
+      </div>
+      <div>
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Đăng nhập</button>
+    </form>
+    <p class="field-hint" style="margin-top:16px;">
+      Tài khoản mặc định lần đầu: <span class="mono">admin</span> / <span class="mono">admin123</span> — hãy đổi mật khẩu ngay sau khi đăng nhập.
+    </p>
+    <p class="field-hint" style="margin-top:6px;">
+      Chưa có tài khoản? <a href="{{ url_for('register') }}" style="color:var(--accent);">Đăng ký ngay</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}
